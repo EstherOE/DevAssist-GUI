@@ -16,9 +16,11 @@ using System.Windows.Media;
 namespace DevAssistGU;
 
  public partial class MainWindow : Window
-    {
+{
+        string lastError="";
         CommandHandler handler = new CommandHandler();
-        AskTool ai = new AskTool();
+    AskTool ai = new AskTool();
+        
     HelpTool help = new HelpTool();
         public MainWindow()
         {
@@ -43,8 +45,38 @@ namespace DevAssistGU;
             // 🔥 Run in background
             string result = await Task.Run(() => handler.Handle(input));
 
-            OutputBox.AppendText(result + "\n\n");
+           // 🔥 HANDLE FIX COMMAND
+if (result == "FIX_ERROR")
+{
+    OutputBox.AppendText("> " + input + "\n");
 
+    if (string.IsNullOrWhiteSpace(lastError))
+    {
+        OutputBox.AppendText("No error to fix.\n\n");
+    }
+    else
+    {
+        OutputBox.AppendText("🤖 Fixing error...\n");
+
+        AskTool ai = new AskTool();
+        string fix = ai.GetReply(lastError);
+
+        OutputBox.AppendText(fix + "\n\n");
+    }
+
+    InputBox.Clear();
+    return;
+}
+
+// 🔥 NORMAL OUTPUT
+OutputBox.AppendText("> " + input + "\n");
+OutputBox.AppendText(result + "\n\n");
+
+// 🔥 SAVE ERROR
+if (result.ToLower().Contains("error") || result.Contains("❌"))
+{
+    lastError = result;
+}
             OutputBox.ScrollToEnd();
             InputBox.Clear();
         }
@@ -100,6 +132,7 @@ class CommandHandler
         new GitTool(),
         new ProjectTool(),
         new AskTool(),
+        new HelpTool(),
 
     };
 
@@ -112,7 +145,10 @@ class CommandHandler
 
         string command = tokens[0].ToLower();
         string[] args = tokens.Skip(1).ToArray();
-
+        if(command== "fix")
+        {
+            return "FIX_ERROR";
+        }
         foreach (var tool in tools)
         {
             if (tool.CanHandle(command))
@@ -157,7 +193,7 @@ public class AskTool : ITool
     List<(string role, string content)> memory= new List<(string, string )>();
     public bool CanHandle(string command)
     {
-        return command == "ask" || command == "explain" || command == "fix";
+        return command == "ask" || command == "explain" ;
     }
 
     public string Execute(string[] args)
